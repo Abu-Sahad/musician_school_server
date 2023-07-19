@@ -13,7 +13,7 @@ app.use(express.json())
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ivpd0t4.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -32,7 +32,7 @@ async function run() {
         const classCollection = client.db('musicInstrument').collection('classes')
         const instructorCollection = client.db('musicInstrument').collection('instructor')
         const classBookCollection = client.db('musicInstrument').collection('bookItem')
-       
+
 
         app.get('/class', async (req, res) => {
             const result = await classCollection.find().toArray()
@@ -51,6 +51,29 @@ async function run() {
             res.send(result)
         })
 
+        //book cart api
+        app.get('/bookCart', async (req, res) => {
+            const email = req.query.email;
+            console.log(email);
+
+            if (!email) {
+                res.send([]);
+                return; // Add this line to terminate the execution
+            }
+
+            const query = { email: email };
+            const result = await classBookCollection.find(query).toArray();
+            res.send(result);
+        });
+
+
+        //delete api from cart
+        app.delete('/bookCart/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await classBookCollection.deleteOne(query);
+            res.send(result)
+        })
 
 
 
