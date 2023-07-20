@@ -38,13 +38,36 @@ async function run() {
 
 
         //user oparetion
+        app.get('/users', async (req, res) => {
+            const result = await usersCollection.find().toArray()
+            res.send(result)
+        })
+
+        //admin api create 
+
+        app.patch('/users/admin/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) }
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                },
+            };
+            const result = await usersCollection.updateOne(filter, updatedDoc);
+            res.send(result)
+        })
 
         app.post('/users', async (req, res) => {
             const user = req.body;
             console.log(user);
+            const query = { email: user.email }
+            const existingUser = await usersCollection.findOne(query)
+            if (existingUser) {
+                return res.send({ message: 'user already exists' })
+            }
             const result = await usersCollection.insertOne(user);
             res.send(result)
-        })     
+        })
 
 
         app.get('/class', async (req, res) => {
