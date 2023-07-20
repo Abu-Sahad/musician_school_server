@@ -80,11 +80,20 @@ async function run() {
             const result = { admin: user?.role === 'admin' }
             res.send(result);
         })
+        //instructor check via mail
+        app.get('/users/instructor/:email', async (req, res) => {
+            const email = req.params.email;
+            console.log('instructor email', email)
+            const query = { email: email }
+            const user = await usersCollection.findOne(query);
+            const result = { instructor: user?.role === 'instructor' }
+            console.log('result', result)
+            res.send(result);
+        })
 
-        
+
         app.post('/users', async (req, res) => {
             const user = req.body;
-            console.log(user);
             const query = { email: user.email }
             const existingUser = await usersCollection.findOne(query)
             if (existingUser) {
@@ -107,7 +116,6 @@ async function run() {
 
         app.post('/bookCart', async (req, res) => {
             const item = req.body;
-            console.log(item);
             const result = await classBookCollection.insertOne(item);
             res.send(result)
         })
@@ -115,7 +123,6 @@ async function run() {
         //book cart api
         app.get('/bookCart', async (req, res) => {
             const email = req.query.email;
-            console.log(email);
 
             if (!email) {
                 res.send([]);
