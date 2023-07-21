@@ -2,16 +2,11 @@ require('dotenv').config()
 const express = require('express')
 const app = express()
 const cors = require('cors');
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const port = process.env.PORT || 5000;
-
 
 app.use(cors())
 app.use(express.json())
-
-
-
-
-
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ivpd0t4.mongodb.net/?retryWrites=true&w=majority`;
@@ -35,6 +30,7 @@ async function run() {
         const classCollection = client.db('musicInstrument').collection('classes')
         const instructorCollection = client.db('musicInstrument').collection('instructor')
         const classBookCollection = client.db('musicInstrument').collection('bookItem')
+        const paymentCollection = client.db('musicInstrument').collection('payments')
 
 
         //user oparetion
@@ -83,11 +79,11 @@ async function run() {
         //instructor check via mail
         app.get('/users/instructor/:email', async (req, res) => {
             const email = req.params.email;
-            console.log('instructor email', email)
+            //console.log('instructor email', email)
             const query = { email: email }
             const user = await usersCollection.findOne(query);
             const result = { instructor: user?.role === 'instructor' }
-            console.log('result', result)
+            //console.log('result', result)
             res.send(result);
         })
 
@@ -143,6 +139,37 @@ async function run() {
             res.send(result)
         })
 
+
+
+        //create payment intent
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            //console.log(price, amount)
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
+
+
+        //payment related api
+        app.post('/payments', async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+            //console.log(result)
+            //res.send(result)
+
+            const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+            const deleteResult = await classBookCollection.deleteMany(query)
+
+            res.send({ insertResult, deleteResult });
+        })
 
 
 
