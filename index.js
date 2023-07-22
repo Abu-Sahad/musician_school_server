@@ -43,6 +43,11 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/popular', async (req, res) => {
+            const popularClasses = await classCollection.find().sort({ enrolled: -1 }).toArray();
+            res.send(popularClasses)
+        })
+
         //admin api create 
 
         app.patch('/users/admin/:id', async (req, res) => {
