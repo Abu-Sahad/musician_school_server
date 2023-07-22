@@ -33,6 +33,10 @@ async function run() {
         const paymentCollection = client.db('musicInstrument').collection('payments')
 
 
+        const addClass = client.db("musicInstrument").collection("addClass");
+        const deniedList = client.db('musicInstrument').collection("deniedList");
+
+
         //user oparetion
         app.get('/users', async (req, res) => {
             const result = await usersCollection.find().toArray()
@@ -85,6 +89,15 @@ async function run() {
             const result = { instructor: user?.role === 'instructor' }
             //console.log('result', result)
             res.send(result);
+        })
+
+        //payment
+
+        app.get('/payment/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email }
+            const result = await paymentCollection.find(query).toArray()
+            res.send(result)
         })
 
 
@@ -140,6 +153,67 @@ async function run() {
         })
 
 
+        //admin instructor 
+
+
+        app.get('payment', async (req, res) => {
+            const result = await paymentCollection.find().toArray();
+            res.send(result)
+        })
+        // ? Admin route start here 
+
+        app.get("/admin-get-all-course", async (req, res) => {
+            const result = await addClass.find().toArray();
+            res.send(result);
+        });
+
+        app.post("/admin-approve", async (req, res) => {
+            const result = await classCollection.insertOne(req.body);
+            const objectID = new ObjectId(req.body._id);
+
+            const del = await addClass.deleteOne({ _id: objectID });
+            if (del.deletedCount === 1) {
+                console.log("Data deleted successfully.");
+            } else {
+                console.log("Data not found or not deleted.");
+            }
+
+            res.send(result);
+        });
+
+        app.post("/admin-denied", async (req, res) => {
+            const result = await deniedList.insertOne(req.body);
+            const objectID = new ObjectId(req.body._id);
+            const del = await addClass.deleteOne({ _id: objectID });
+            res.send({ result, del });
+        });
+
+
+        app.post("/add-class", async (req, res) => {
+            const result = await addClass.insertOne(req.body);
+            res.send(result);
+        });
+
+        app.post("/get-all-feedback", async (req, res) => {
+            const email = req.body.email;
+            const query = { email };
+            const result = await deniedList.find(query).toArray();
+            console.log("result => ", req.body.email);
+            res.send(result);
+        });
+
+        app.post("/get-all-course", async (req, res) => {
+            const email = req.body.email;
+            const query = { email };
+            const result = await classCollection.find(query).toArray();
+            // console.log("result => ",result);
+            //  res.json({ success: true });
+            res.send(result);
+        });
+
+        //end admin instructor
+
+
 
         //create payment intent
         app.post('/create-payment-intent', async (req, res) => {
@@ -161,16 +235,35 @@ async function run() {
         //payment related api
         app.post('/payments', async (req, res) => {
             const payment = req.body;
+            console.log(payment)
             const insertResult = await paymentCollection.insertOne(payment);
-            //console.log(result)
-            //res.send(result)
+            const query = { _id: new ObjectId(payment.classId) }
+            const deleteResult = await classBookCollection.deleteOne(query)
+            const classQuery = { _id: payment.singleclassBookId }
+            console.log(classQuery)
+            const selectedClass = await classCollection.findOne(classQuery)
+            console.log(selectedClass)
+            const option = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    enrolled: selectedClass?.enrolled + 1 || 1,
+                    availableSeats: selectedClass?.availableSeats - 1
+                }
+            }
+            const updateResult = await classCollection.updateOne(classQuery, updatedDoc, option)
 
-            const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
-            const deleteResult = await classBookCollection.deleteMany(query)
-
-            res.send({ insertResult, deleteResult });
+            res.send({ insertResult, deleteResult, updateResult });
         })
 
+
+        //popular class
+
+        app.get('popular', async (req, res) => {
+
+            const sort = { enrolled: -1 }
+            const result = await classCollection.find().sort(sort).limit(6).toArray()
+            res.send(result)
+        })
 
 
         // Send a ping to confirm a successful connection
