@@ -96,6 +96,16 @@ async function run() {
             res.send(result);
         })
 
+        // intructor match
+        app.get('/users/instructors', async (req, res) => {
+            const query={role:'instructor'}
+            const result = await usersCollection.find(query).toArray();
+
+            // const instructor=user
+            // const result = { instructor: user?.role === 'instructor' }
+            res.send(result);
+        })
+
         //payment
 
         app.get('/payment/:email', async (req, res) => {
@@ -122,10 +132,14 @@ async function run() {
             const result = await classCollection.find().toArray()
             res.send(result)
         })
+
         app.get('/instructor', async (req, res) => {
             const result = await instructorCollection.find().toArray()
             res.send(result)
         })
+
+
+
 
 
         app.post('/bookCart', async (req, res) => {
@@ -203,7 +217,7 @@ async function run() {
             const email = req.body.email;
             const query = { email };
             const result = await deniedList.find(query).toArray();
-            console.log("result => ", req.body.email);
+            //console.log("result => ", req.body.email);
             res.send(result);
         });
 
@@ -223,7 +237,7 @@ async function run() {
         //create payment intent
         app.post('/create-payment-intent', async (req, res) => {
             const { price } = req.body;
-            const amount = parseInt(price * 100);
+            const amount = parseInt(price);
             //console.log(price, amount)
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amount,
@@ -240,14 +254,14 @@ async function run() {
         //payment related api
         app.post('/payments', async (req, res) => {
             const payment = req.body;
-            console.log(payment)
+            //console.log(payment)
             const insertResult = await paymentCollection.insertOne(payment);
             const query = { _id: new ObjectId(payment.classId) }
             const deleteResult = await classBookCollection.deleteOne(query)
             const classQuery = { _id: payment.singleclassBookId }
-            console.log(classQuery)
+            //console.log(classQuery)
             const selectedClass = await classCollection.findOne(classQuery)
-            console.log(selectedClass)
+            //console.log(selectedClass)
             const option = { upsert: true }
             const updatedDoc = {
                 $set: {
